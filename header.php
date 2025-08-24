@@ -64,22 +64,23 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             font-weight: 500;
             color: #2c3e50;
             padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: all 0.2s ease;
             font-size: 0.9rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            border-bottom: 2px solid transparent; /* garis bawah default transparan */
+            transition: all 0.2s ease;
         }
 
         .nav-link:hover {
-            background: rgba(30, 103, 152, 0.08);
             color: #1e6798;
+            border-bottom: 2px solid #1e6798; /* garis muncul saat hover */
         }
 
         .nav-item.active .nav-link {
-            background: #1e6798;
-            color: #ffffff;
+            color: #1e6798;
+            border-bottom: 2px solid #1e6798; /* garis muncul saat aktif */
+            background: none; /* hapus background */
         }
 
         .notification-badge {
@@ -159,40 +160,71 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                             <i class="fas fa-car"></i> Mobil
                         </a>
                     </li>
-                    <?php if(isset($_SESSION['USER'])) { ?>
+                    <li class="nav-item position-relative <?php echo ($currentPage == 'riwayat_pesanan.php') ? 'active' : ''; ?>">
+                        <?php if (isset($_SESSION['USER'])): ?>
+                            <?php
+                            // Ambil data jumlah nota yang belum dibaca
+                            require_once 'koneksi/koneksi.php';
+                            $user_id = $_SESSION['USER']['id_login'];
+                            
+                            try {
+                                $stmt = $koneksi->prepare("SELECT COUNT(*) FROM nota WHERE id_login = ? AND status = 'belum_dibaca'");
+                                $stmt->execute([$user_id]);
+                                $notifCount = $stmt->fetchColumn();
+                            } catch(PDOException $e) {
+                                // Silent fail for notification count
+                                $notifCount = 0;
+                            }
+                            ?>
+                            <a class="nav-link" href="riwayat_pesanan.php?id=<?= urlencode($lastBooking['kode_booking']); ?>" title="Pesanan">
+                                <i class="fas fa-credit-card"></i> Pesanan
+                                <?php if ($notifCount > 0): ?>
+                                    <span class="notification-badge"><?= $notifCount; ?></span>
+                                <?php endif; ?>
+                            </a>
+                        <?php endif; ?>
+                    </li>
+                    <?php if (isset($_SESSION['USER'])): ?>
                         <li class="nav-item <?php echo ($currentPage == 'profil.php') ? 'active' : ''; ?>">
                             <a class="nav-link" href="profil.php">
                                 <i class="fas fa-user"></i> Profil
                             </a>
                         </li>
-                        <li class="nav-item position-relative <?php echo ($currentPage == 'nota_pesanan.php') ? 'active' : ''; ?>">
-                            <a class="nav-link" href="nota_pesanan.php" title="Notifikasi">
-                                <i class="fas fa-bell"></i>
-                                <?php
-                                if(isset($_SESSION['USER'])) {
-                                    require_once 'koneksi/koneksi.php';
-                                    try {
-                                        $id_login = $_SESSION['USER']['id_login'];
-                                        $stmt = $koneksi->prepare("SELECT COUNT(*) FROM nota WHERE id_login = ? AND status = 'belum_dibaca'");
-                                        $stmt->execute([$id_login]);
-                                        $notifCount = $stmt->fetchColumn();
-                                        if ($notifCount > 0) {
-                                            echo '<span class="notification-badge">'.$notifCount.'</span>';
-                                        }
-                                    } catch(PDOException $e) {
-                                        // Silent fail for notification count
-                                    }
-                                }
-                                ?>
-                            </a>
-                        </li>
                         <li class="nav-item">
-                            <a class="nav-link text-danger" href="admin/logout.php" 
-                               onclick="return confirm('Apakah anda ingin logout?');">
-                                <strong>Logout</strong>
+                            <a class="nav-link text-danger" href="#" 
+                            onclick="confirmLogout(); return false;">
+                            <strong>Logout</strong>
+                            </a>
+                                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                                <script>
+                                function confirmLogout() {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Konfirmasi Logout',
+                                        text: 'Apakah Anda yakin ingin logout?',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Ya, Logout',
+                                        cancelButtonText: 'Batal',
+                                        background: "#fff",
+                                        color: "#161412ff",
+                                        customClass: {
+                                            popup: "animated fadeInDown" // Animasi kotak alert
+                                        }
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            window.location.href = 'admin/logout.php'; // Arahkan ke halaman logout
+                                        }
+                                    });
+                                }
+                                </script>
+                        </li>
+                    <?php else: ?>
+                        <li class="nav-item">
+                            <a class="nav-link text-primary" href="index.php">
+                                <strong>Login</strong>
                             </a>
                         </li>
-                    <?php } ?>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
