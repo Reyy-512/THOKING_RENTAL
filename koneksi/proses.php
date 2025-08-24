@@ -2,10 +2,39 @@
 session_start();
 require 'koneksi.php';
 
-// Aktifkan error reporting biar gak blank
+// Aktifkan error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 $koneksi->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+function showAlert($icon, $title, $text, $redirect = null) {
+    $color = $icon === 'success' ? '#007bff' : '#dc3545'; // Biru untuk berhasil, Merah untuk gagal
+    echo '
+    <html>
+    <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    </head>
+    <body style="background-color: #fdf9f4;">
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            Swal.fire({
+                icon: "' . $icon . '",
+                title: "' . $title . '",
+                text: "' . $text . '",
+                timer: 5000,
+                background: "#fff",
+                color: "#161412ff",
+                iconColor: "' . $color . '",
+                customClass: {
+                    popup: "animated fadeInDown" // Animasi kotak alert
+                }
+            }).then(() => {
+                window.location = "' . $redirect . '";
+            });
+        </script>
+    </body>
+    </html>';
+}
 
 // === LOGIN ===
 if ($_GET['id'] == 'login') {
@@ -16,71 +45,16 @@ if ($_GET['id'] == 'login') {
     $row->execute([$user, $pass]);
 
     if ($row->rowCount() > 0) {
-        // session_start();
         $hasil = $row->fetch();
-
         $_SESSION['USER'] = $hasil;
 
-        if ($_SESSION['USER']['level'] == 'admin') {
-            $redirect = $url . 'admin/index.php';
-        } else {
-            $redirect = $url . 'dashboard.php';
-        }
+        $redirect = ($_SESSION['USER']['level'] == 'admin') ? $url . 'admin/index.php' : $url . 'dashboard.php';
 
-        // Alert sukses
-        echo '
-        <html>
-        <head>
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-        </head>
-<body style="background-color: #fdf9f4;">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        Swal.fire({
-            icon: "success",
-            title: "Selamat Datang!",
-            text: "Login berhasil. Selamat menggunakan layanan rental mobil Toraja.",
-            background: "#fff7f0",
-            color: "#f1a55eff",
-            iconColor: "#b87333",
-            showConfirmButton: false, // Hilangkan tombol
-            timer: 2000, // Tutup otomatis setelah 2 detik
-            timerProgressBar: true // Progress bar di bawah
-        }).then(() => {
-            window.location = "' . $redirect . '";
-        });
-    </script>
-</body>
-
-        </html>';
+        showAlert('success', 'Selamat Datang!', 'Login berhasil. Selamat menggunakan layanan rental THO-KING.', $redirect);
     } else {
-        // Alert gagal
-        echo '
-        <html>
-        <head>
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-        </head>
-        <body style="background-color: #fdf9f4;">
-            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-            <script>
-                Swal.fire({
-                    icon: "error",
-                    title: "Login Gagal",
-                    text: "Periksa kembali username dan password Anda.",
-                    background: "#fff7f0",
-                    color: "#5a3e2b",
-                    iconColor: "#b87333",
-                    confirmButtonText: "Coba Lagi",
-                    confirmButtonColor: "#8B4513"
-                }).then(() => {
-                    window.location = "' . $url . 'index.php";
-                });
-            </script>
-        </body>
-        </html>';
+        showAlert('error', 'Login Gagal', 'Periksa kembali username dan password Anda.', $url . 'index.php');
     }
 }
-
 
 // === DAFTAR ===
 if ($_GET['id'] == 'daftar') {
@@ -92,12 +66,12 @@ if ($_GET['id'] == 'daftar') {
     $level = 'pengguna';
 
     if (empty($nik) || !preg_match('/^\d{16}$/', $nik)) {
-        echo '<script>alert("NIK wajib diisi dengan 16 digit angka."); window.history.back();</script>';
+        showAlert('warning', 'NIK Tidak Valid', 'NIK wajib diisi dengan 16 digit angka.', $url . 'index.php');
         exit;
     }
 
     if (empty($no_telepon) || !preg_match('/^\d{10,15}$/', $no_telepon)) {
-        echo '<script>alert("Nomor Telepon wajib diisi dengan 10-15 digit angka."); window.history.back();</script>';
+        showAlert('warning', 'Nomor Telepon Tidak Valid', 'Nomor Telepon wajib diisi dengan 10-15 digit angka.', $url . 'index.php');
         exit;
     }
 
@@ -105,93 +79,49 @@ if ($_GET['id'] == 'daftar') {
     $row->execute([$user]);
 
     if ($row->rowCount() > 0) {
-echo '
-<html>
-<head>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-</head>
-<body style="background-color: #fdf9f4;">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        Swal.fire({
-            icon: "warning",
-            title: "Username Sudah Terdaftar",
-            text: "Gunakan username lain untuk melanjutkan.",
-            background: "#fff7f0",
-            color: "#5a3e2b",
-            iconColor: "#b87333",
-            confirmButtonText: "OK",
-            confirmButtonColor: "#8B4513"
-        }).then(() => {
-            window.location = "' . $url . 'index.php";
-        });
-    </script>
-</body>
-</html>';
-
+        showAlert('warning', 'Username Sudah Terdaftar', 'Gunakan username lain untuk melanjutkan.', $url . 'index.php');
     } else {
         $sql = "INSERT INTO login (nama_pengguna, username, password, nik, no_telepon, level) VALUES (?,?,?,?,?,?)";
         $insert = $koneksi->prepare($sql);
         $insert->execute([$nama, $user, $pass, $nik, $no_telepon, $level]);
 
-        echo '<script>alert("Pendaftaran berhasil, silakan login."); window.location="'.$url.'index.php";</script>';
+        showAlert('success', 'Pendaftaran Berhasil', 'Pendaftaran berhasil, silakan login.', $url . 'index.php');
     }
 }
 
 // === BOOKING ===
 if ($_GET['id'] == 'booking') {
     $unik = random_int(100, 999);
-
-    // Ambil harga mobil dari database agar aman
     $id_mobil = $_POST['id_mobil'];
+    
     $stmt = $koneksi->prepare("SELECT harga FROM mobil WHERE id_mobil = ?");
     $stmt->execute([$id_mobil]);
     $mobil = $stmt->fetch();
 
     if (!$mobil) {
-        echo '<script>
-        alert("Mobil tidak ditemukan.");
-        window.history.back();
-        </script>';
+        showAlert('error', 'Mobil Tidak Ditemukan', 'Mobil tidak ditemukan.', $url . 'index.php');
         exit;
     }
 
     $harga_mobil = $mobil['harga'];
-
-    // Ambil metode pengambilan dari form
-
-    // Ambil dan sesuaikan lama_sewa sesuai paket waktu_sewa
     $lama_sewa_input = intval($_POST['lama_sewa']);
     $waktu_sewa = $_POST['waktu_sewa'];
 
-    if ($waktu_sewa == 'harian') {
-        $lama_sewa = $lama_sewa_input * 1;
-    } elseif ($waktu_sewa == 'mingguan') {
-        $lama_sewa = $lama_sewa_input * 7;
-    } elseif ($waktu_sewa == 'bulanan') {
-        $lama_sewa = $lama_sewa_input * 30;
-    } elseif ($waktu_sewa == '12_jam') {
-        $lama_sewa = 0.5 * $lama_sewa_input;
-    } else {
-        $lama_sewa = $lama_sewa_input;
-    }
+    $lama_sewa = match ($waktu_sewa) {
+        'harian' => $lama_sewa_input * 1,
+        'mingguan' => $lama_sewa_input * 7,
+        'bulanan' => $lama_sewa_input * 30,
+        '12_jam' => 0.5 * $lama_sewa_input,
+        default => $lama_sewa_input,
+    };
 
-    // Hitung total harga sesuai lama_sewa yang sudah dikonversi
     $total_harga = ($harga_mobil * $lama_sewa);
-
-    $data[] = time(); // kode_booking
-    $data[] = $_POST['id_login'];
-    $data[] = $_POST['id_mobil'];
-    $data[] = $_POST['ktp'];
-    $data[] = $_POST['nama'];
-    $data[] = $_POST['alamat'];
-    $data[] = $_POST['no_tlp'];
-    $data[] = $_POST['tanggal'];
-    $data[] = $lama_sewa;
-    $data[] = $total_harga;
-    $data[] = "Belum Bayar";
-    $data[] = date('Y-m-d');
-    $data[] = $waktu_sewa;
+    $data = [
+        time(), $_POST['id_login'], $_POST['id_mobil'], $_POST['ktp'], 
+        $_POST['nama'], $_POST['alamat'], $_POST['no_tlp'], 
+        $_POST['tanggal'], $lama_sewa, $total_harga, 
+        "Belum Bayar", date('Y-m-d'), $waktu_sewa
+    ];
 
     $sql = "INSERT INTO booking (
                 kode_booking, id_login, id_mobil, ktp, nama, alamat, no_tlp,
@@ -200,29 +130,22 @@ if ($_GET['id'] == 'booking') {
     $insert = $koneksi->prepare($sql);
     $insert->execute($data);
 
-    echo '<script>
-    alert("Booking berhasil, silakan melakukan pembayaran.");
-    window.location="../bayar.php?id='.time().'";
-    </script>';
+    showAlert('success', 'Booking Berhasil', 'Booking berhasil, silakan melakukan pembayaran.', '../bayar.php?id=' . time());
 }
-// === KONFIRMASI PEMBAYARAN ===
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-$koneksi->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+// === KONFIRMASI PEMBAYARAN ===
 if (!isset($_GET['id'])) {
     die("Parameter 'id' tidak ditemukan.");
 }
 
 if ($_GET['id'] === 'konfirmasi') {
-
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         die("Akses tidak valid.");
     }
 
-    $id_booking     = $_POST['id_booking'] ?? '';
-    $no_rekening    = $_POST['no_rekening'] ?? '';
-    $nama_rekening  = $_POST['nama'] ?? '';
+    $id_booking = $_POST['id_booking'] ?? '';
+    $no_rekening = $_POST['no_rekening'] ?? '';
+    $nama_rekening = $_POST['nama'] ?? '';
 
     if (empty($id_booking) || empty($no_rekening) || empty($nama_rekening)) {
         die("Data form tidak lengkap.");
@@ -231,31 +154,35 @@ if ($_GET['id'] === 'konfirmasi') {
     // Upload bukti bayar
     $bukti_bayar = '';
     if (isset($_FILES['bukti_bayar']) && $_FILES['bukti_bayar']['error'] === UPLOAD_ERR_OK) {
-        $allowed_ext = ['jpg','jpeg','png','pdf'];
-        $file_name   = $_FILES['bukti_bayar']['name'];
-        $file_tmp    = $_FILES['bukti_bayar']['tmp_name'];
-        $file_size   = $_FILES['bukti_bayar']['size'];
-        $file_ext    = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+        $allowed_ext = ['jpg', 'jpeg', 'png', 'pdf'];
+        $file_name = $_FILES['bukti_bayar']['name'];
+        $file_tmp = $_FILES['bukti_bayar']['tmp_name'];
+        $file_size = $_FILES['bukti_bayar']['size'];
+        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
 
         if (!in_array($file_ext, $allowed_ext)) {
-            die("Format file tidak valid. Hanya JPG/JPEG/PNG/PDF.");
+            showAlert('error', 'Format File Tidak Valid', 'Hanya JPG/JPEG/PNG/PDF yang diperbolehkan.', $url . 'index.php');
+            exit;
         }
         if ($file_size > 2097152) {
-            die("Ukuran file melebihi 2MB.");
+            showAlert('error', 'Ukuran File Terlalu Besar', 'Ukuran file melebihi 2MB.', $url . 'index.php');
+            exit;
         }
 
-        $upload_dir = __DIR__ . '/../assets/bukti_bayar/';
+        $upload_dir = _DIR_ . '/../assets/bukti_bayar/';
         if (!is_dir($upload_dir)) {
             mkdir($upload_dir, 0777, true);
         }
 
         $new_name = 'bukti_' . time() . '.' . $file_ext;
         if (!move_uploaded_file($file_tmp, $upload_dir . $new_name)) {
-            die("Gagal mengunggah file.");
+            showAlert('error', 'Gagal Mengunggah File', 'Gagal mengunggah file.', $url . 'index.php');
+            exit;
         }
         $bukti_bayar = $new_name;
     } else {
-        die("Harap upload bukti bayar.");
+        showAlert('error', 'Upload Bukti Bayar', 'Harap upload bukti bayar.', $url . 'index.php');
+        exit;
     }
 
     // Simpan data pembayaran
@@ -267,7 +194,7 @@ if ($_GET['id'] === 'konfirmasi') {
     $update = $koneksi->prepare("UPDATE booking SET konfirmasi_pembayaran = ? WHERE id_booking = ?");
     $update->execute(['Sedang di proses', $id_booking]);
 
-    // 🔹 Update status mobil jadi 'Disewa'
+    // Update status mobil jadi 'Disewa'
     $stmt = $koneksi->prepare("SELECT id_mobil FROM booking WHERE id_booking = ?");
     $stmt->execute([$id_booking]);
     $id_mobil = $stmt->fetchColumn();
@@ -277,14 +204,12 @@ if ($_GET['id'] === 'konfirmasi') {
         $updateMobil->execute([$id_mobil]);
     }
 
-    echo '<script>alert("Konfirmasi berhasil, mohon tunggu nota booking."); window.location="../dashboard.php";</script>';
+    showAlert('success', 'Konfirmasi Berhasil', 'Konfirmasi berhasil, mohon tunggu nota booking.', '../dashboard.php');
 }
-
 
 // === LOGOUT ===
 if ($_GET['id'] == 'logout') {
-    session_start();
     session_destroy();
-    echo '<script>alert("Anda berhasil logout."); window.location="'.$url.'index.php";</script>';
+    showAlert('success', 'Logout Berhasil', 'Anda berhasil logout.', $url . 'index.php');
 }
 ?>
