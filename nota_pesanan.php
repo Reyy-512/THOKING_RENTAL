@@ -2,18 +2,27 @@
 session_start();
 require 'koneksi/koneksi.php';
 
+// Cek jika pengguna sudah login
 if (!isset($_SESSION['USER'])) {
     echo '<script>alert("Silakan login terlebih dahulu."); window.location="login.php";</script>';
     exit;
 }
 
 $id_login = $_SESSION['USER']['id_login'];
+
+// Ambil data riwayat booking
+$riwayat_stmt = $koneksi->prepare("SELECT * FROM booking WHERE id_login=? ORDER BY tanggal DESC");
+$riwayat_stmt->execute([$id_login]);
+$riwayat_booking = $riwayat_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Ambil data nota
 $nota = $koneksi->prepare("SELECT * FROM nota WHERE id_login=? ORDER BY tanggal DESC");
 $nota->execute([$id_login]);
 $data = $nota->fetchAll(PDO::FETCH_ASSOC);
 
-// update status menjadi 'dibaca' setelah diakses
-$koneksi->prepare("UPDATE nota SET status='dibaca' WHERE id_login=?")->execute([$id_login]);
+// Update status menjadi 'dibaca'
+$koneksi->prepare("UPDATE nota SET status='dibaca' WHERE id_login=? AND status='belum_dibaca'")->execute([$id_login]);
+
 include 'header.php';
 ?>
 
@@ -21,7 +30,7 @@ include 'header.php';
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Nota Pesanan - THO-KING</title>
+    <title>Riwayat Pesanan - THO-KING</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
     <!-- Bootstrap 5 CSS -->
@@ -56,16 +65,25 @@ include 'header.php';
             margin-bottom: 2rem;
         }
         
-        .hero-content {
-            text-align: center;
-            color: white;
-            z-index: 2;
+        .hero-content h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(249, 248, 248, 0.3);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .hero-content p {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out 0.2s both;
         }
         
         .hero-title {
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
+            color: #ffffff;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
         
@@ -199,6 +217,10 @@ include 'header.php';
             margin-bottom: 2rem;
             text-align: center;
         }
+        .hero-subtitle {
+            color: #f4f6f8ff;
+            font-size: 1.1rem;
+        }
         
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -243,95 +265,82 @@ include 'header.php';
 <section class="hero-section">
     <div class="hero-content">
         <h1 class="hero-title">
-            <i class="fas fa-file-invoice me-3"></i>Nota Pesanan Anda
+            <i class="fas fa-file-invoice me-3"></i>Riwayat Pesanan Anda
         </h1>
-        <p class="lead">Kelola dan pantau semua pesanan rental mobil Anda</p>
     </div>
 </section>
 
-<div class="container section-padding">
-    <div class="row">
-        <div class="col-12">
-            <h2 class="section-title" data-aos="fade-up">
-                <i class="fas fa-history me-2"></i>Riwayat Pesanan
-            </h2>
-        </div>
-    </div>
-
-    <?php if ($data): ?>
+<div class="container">
+    <?php if ($riwayat_booking): ?>
         <div class="row">
-            <?php foreach ($data as $index => $row): ?>
-                <div class="col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="<?php echo $index * 100; ?>">
+            <?php foreach ($riwayat_booking as $index => $riwayat): ?>
+                <div class="col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="<?= $index * 100; ?>">
                     <div class="modern-card">
                         <div class="card-header-modern">
-                            <h5>
-                                <i class="fas fa-receipt me-2"></i>
-                                Kode Booking: <?= htmlspecialchars($row['kode_booking']); ?>
+                            <h5 class="d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas fa-receipt me-2"></i>
+                                    Kode Booking: <?= htmlspecialchars($riwayat['kode_booking']); ?>
+                                </span>
+                                <span> <i class="fas fa-calendar me-2"></i>
+                                    <?= date('d M Y'); ?>
+                                </span>
                             </h5>
                         </div>
                         <div class="card-body p-4">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="info-box">
-                                        <div class="info-label">
-                                            <i class="fas fa-money-bill-wave me-2"></i>Total Harga
-                                        </div>
-                                        <div class="h5 mb-0 text-primary">
-                                            Rp <?= number_format($row['total_harga'], 0, ',', '.'); ?>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="info-box">
-                                        <div class="info-label">
-                                            <i class="fas fa-calendar-alt me-2"></i>Tanggal Nota
-                                        </div>
-                                        <div class="h6 mb-0">
-                                            <?= date('d M Y', strtotime($row['tanggal'])); ?>
-                                            <br>
-                                            <small class="text-muted"><?= date('H:i', strtotime($row['tanggal'])); ?> WIB</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <p>Nama: <?= htmlspecialchars($riwayat['nama']); ?></p>
+                            <p>Total Bayar: Rp <?= number_format($riwayat['total_harga'], 0, ',', '.'); ?></p>
+                            <p>Status: 
+                                <strong>
+                                    <?php 
+                                    $status = htmlspecialchars($riwayat['konfirmasi_pembayaran']);
+                                    $statusClass = '';
+
+                                    switch ($status) {
+                                        case 'Pembayaran di terima':
+                                            $statusClass = 'text-success'; // Green
+                                            break;
+                                        case 'Pembayaran ditolak':
+                                            $statusClass = 'text-danger'; // Red
+                                            break;
+                                        case 'Belum Bayar':
+                                            $statusClass = 'text-warning'; // Red
+                                            break;
+                                        default:
+                                            $statusClass = 'text-muted'; // Default or unknown status
+                                            break;
+                                    }
+                                    ?>
+                                    <span class="<?= $statusClass; ?>"><?= $status; ?></span>
+                                </strong>
+                            </p>
                             
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span class="info-label me-2">
-                                                <i class="fas fa-info-circle me-1"></i>Status:
-                                            </span>
-                                            <?php if ($row['status'] == 'dibaca'): ?>
-                                                <span class="badge bg-success badge-status">
-                                                    <i class="fas fa-check-circle me-1"></i>Dibaca
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="badge bg-warning text-dark badge-status">
-                                                    <i class="fas fa-clock me-1"></i>Belum Dibaca
-                                                </span>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <?php
-                                    $jenis = strtolower($row['jenis']);
+                            <!-- Tombol Cek Status Pesanan dan Cetak Nota -->
+                            <div class="d-flex justify-content-between mt-3">
+                                <!-- Tombol Cek Status Pesanan -->
+                                <a href="bayar.php?id=<?= urlencode($riwayat['kode_booking']); ?>" class="btn btn-modern w-50 me-2">
+                                    <i class="fas fa-credit-card me-2"></i> Cek Detail Pesanan
+                                </a>
+
+                                <!-- Tombol Cetak Nota -->
+                                <?php
+                                $nota_stmt = $koneksi->prepare("SELECT * FROM nota WHERE kode_booking = ?");
+                                $nota_stmt->execute([$riwayat['kode_booking']]);
+                                $nota_data = $nota_stmt->fetch();
+
+                                if ($nota_data): // Memeriksa apakah ada nota
+                                    $jenis = strtolower($nota_data['jenis']);
                                     $isRejected = ($jenis === 'ditolak');
                                     $btnClass = $isRejected ? 'btn-danger-modern' : 'btn-success-modern';
                                     $btnLabel = $isRejected ? 'Cetak Nota Penolakan' : 'Cetak Nota Pesanan';
-                                    $btnIcon = $isRejected ? 'fas fa-times-circle' : 'fas fa-print';
-                                    ?>
-                                    
-                                    <a href="cetak_nota.php?id=<?= $row['id_nota']; ?>" 
-                                       target="_blank" 
-                                       class="btn-modern <?= $btnClass; ?> w-100">
-                                        <i class="<?= $btnIcon; ?> me-2"></i><?= $btnLabel; ?>
-                                    </a>
-                                </div>
+                                    $btnIcon = $isRejected ? 'fas fa-print' : 'fas fa-print';
+                                ?>
+                                <a href="cetak_nota.php?id=<?= $nota_data['id_nota']; ?>" 
+                                   target="_blank" 
+                                   class="btn-modern <?= $btnClass; ?> w-50">
+                                    <i class="<?= $btnIcon; ?> me-2"></i><?= $btnLabel; ?>
+                                </a>
+                                <?php endif; // Tutup pemeriksaan nota ?>
                             </div>
                         </div>
                     </div>
@@ -339,17 +348,13 @@ include 'header.php';
             <?php endforeach; ?>
         </div>
     <?php else: ?>
-        <div class="row">
-            <div class="col-lg-8 mx-auto">
-                <div class="no-data fade-in-up">
-                    <i class="fas fa-file-excel fa-4x mb-4"></i>
-                    <h4>Belum ada nota pesanan</h4>
-                    <p class="text-muted">Anda belum memiliki nota pesanan dari admin. Silakan melakukan booking mobil terlebih dahulu.</p>
-                    <a href="blog.php" class="btn-modern mt-3">
-                        <i class="fas fa-car me-2"></i>Lihat Daftar Mobil
-                    </a>
-                </div>
-            </div>
+        <div class="no-data fade-in-up">
+            <i class="fas fa-file-excel fa-4x mb-4"></i>
+            <h4>Belum ada riwayat booking</h4>
+            <p class="text-muted">Anda belum melakukan booking mobil sebelumnya.</p>
+            <a href="blog.php" class="btn-modern mt-3">
+                <i class="fas fa-car me-2"></i>Lihat Daftar Mobil
+            </a>
         </div>
     <?php endif; ?>
 </div>
@@ -367,29 +372,6 @@ AOS.init({
     once: true,
     offset: 100
 });
-
-// Real-time clock update
-function updateClock() {
-    const now = new Date();
-    const options = { 
-        day: '2-digit', 
-        month: 'short', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
-    };
-    const timeString = now.toLocaleString('id-ID', options);
-    
-    // Update all clock elements
-    document.querySelectorAll('.jam-realtime').forEach(el => {
-        el.textContent = timeString;
-    });
-}
-
-// Update clock every second
-setInterval(updateClock, 1000);
-updateClock();
 </script>
 
 <?php include 'footer.php'; ?>
